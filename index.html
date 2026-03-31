@@ -40,7 +40,8 @@
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            padding: 8px 5px;
+            /* ✅ AÑADIDO: padding-top para bajar contenido (radio se mantiene fija) */
+            padding: 110px 5px 8px 5px;
         }
 
         h1 {
@@ -194,10 +195,10 @@
             left: 23px;
         }
 
-        /* 📻 RADIO 80 Y 90 */
+        /* 📻 RADIO 80 Y 90 - POSICIÓN FIJA ARRIBA IZQUIERDA */
         .radio-container {
-            position: fixed;
-            top: 10px;
+            position: fixed;  /* ✅ FIXED para que no se mueva con el padding */
+            top: 10px;        /* ✅ Mantenido en su posición original */
             left: 10px;
             display: flex;
             flex-direction: column;
@@ -489,7 +490,7 @@
         <button onclick="initGame()">🔄 Reiniciar</button>
     </div>
 
-    <!-- 📻 BOTÓN RADIO (arriba izquierda) -->
+    <!-- 📻 BOTÓN RADIO (arriba izquierda - POSICIÓN FIJA) -->
     <div class="radio-container">
         <button id="radio-btn" onclick="toggleRadio()" title="Escuchar 80 y 90 Radio">
             <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgqvizWNyyqSmA1V6SOmns4wLWw849mHxRjABDTG0o2iyoHbsDPc9nc0rQW4iW6bfpIQLNn6pOgPlWsygdsuMury7g3ss1yJwDOJY1kHXyQwi53Lp9cyIMduU3NzUVaeme8n6V3_yhhGMEIb5XrCmuBejA6FoE5Uyt9ZmNYAqCxqhFmJf2wA9DpTtz9xg/s640/s80y90.png" 
@@ -575,7 +576,7 @@
         
         const boardElement = document.getElementById('board');
         const scoreElement = document.getElementById('score');
-        const timerElement = document.getElementById('timer');  // ✅ NUEVO
+        const timerElement = document.getElementById('timer');
         const statusElement = document.getElementById('status');
         const messageElement = document.getElementById('message');
 
@@ -785,7 +786,7 @@
             moveCount = 0;
             gameOver = false;
             gameStarted = false;
-            resetTimer();  // ✅ RESET TIMER
+            resetTimer();
             scoreElement.textContent = '0';
             statusElement.textContent = 'Toca para empezar';
             messageElement.textContent = '';
@@ -868,7 +869,7 @@
 
         function startGame(index) {
             gameStarted = true;
-            startTimer();  // ✅ INICIAR TIMER
+            startTimer();
             makeMove(index);
             statusElement.textContent = '¡Juego en curso!';
         }
@@ -905,14 +906,14 @@
 
             if (moveCount === TOTAL_SQUARES) {
                 gameOver = true;
-                stopTimer();  // ✅ PARAR TIMER AL GANAR
+                stopTimer();
                 messageElement.textContent = `¡FELICIDADES! ¡Completaste las 100 casillas en ${formatTime(gameTime)}!`;
                 statusElement.textContent = '¡Juego Terminado!';
                 playWinSound();
                 document.querySelectorAll('.square').forEach(s => s.style.backgroundColor = '#27ae60');
             } else if (validMoves.length === 0) {
                 gameOver = true;
-                stopTimer();  // ✅ PARAR TIMER AL PERDER
+                stopTimer();
                 messageElement.textContent = `Juego Terminado. ${moveCount} casillas en ${formatTime(gameTime)}.`;
                 statusElement.textContent = 'Sin movimientos';
                 playLoseSound();
