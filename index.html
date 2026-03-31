@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Recorrido del Caballo 10x10</title>
+    <style>
+        :root {
+            --bg-color: #2c3e50;
+            --square-empty: #bdc3c7;
+            --square-visited: #34495e;
+            --square-current: #27ae60;
+            --square-hint: #f1c40f;
+            --text-color: #ecf0f1;
+            --modal-bg: rgba(0, 0, 0, 0.85);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 8px 5px;
+        }
+
+        h1 {
+            margin: 5px 0;
+            font-size: 1.3rem;
+            text-align: center;
+        }
+
+        .info-panel {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .instructions-link {
+            color: #3498db;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 0.85rem;
+            transition: color 0.3s;
+        }
+
+        .instructions-link:hover {
+            color: #5dade2;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(10, 1fr);
+            gap: 2px;
+            background-color: #7f8c8d;
+            border: 4px solid #7f8c8d;
+            width: 400px;
+            height: 400px;
+            max-width: 90vw;
+            max-height: 90vw;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            flex-shrink: 0;
+        }
+
+        .square {
+            background-color: var(--square-empty);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .square.visited {
+            background-color: var(--square-visited);
+            color: #fff;
+            font-size: 0.8rem;
+        }
+
+        .square.current {
+            background-color: var(--square-current);
+            color: #fff;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            font-size: 1.3rem;
+        }
+
+        .square.hint {
+            background-color: var(--square-hint);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover { background-color: #c0392b; }
+        button:active { transform: scale(0.95); }
+
+        #message {
+            margin-top: 8px;
+            font-weight: bold;
+            height: 1.2rem;
+            color: #f1c40f;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .sound-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sound-control span {
+            font-size: 0.85rem;
+        }
+
+        .sound-toggle {
+            width: 45px;
+            height: 24px;
+            position: relative;
+            background: #95a5a6;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+            flex-shrink: 0;
+        }
+
+        .sound-toggle.active {
+            background: #27ae60;
+        }
+
+        .sound-toggle::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: 0.3s;
+        }
+
+        .sound-toggle.active::after {
+            left: 23px;
+        }
+
+        /* 📻 RADIO 80 Y 90 */
+        .radio-container {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 150;
+            gap: 5px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #radio-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: 2px solid white;
+            background: rgba(0,0,0,0.3);
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #radio-btn:hover {
+            background: rgba(0,0,0,0.5);
+            transform: scale(1.1);
+            border-color: #ffdd59;
+        }
+        .radio-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+        }
+        .radio-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+        }
+        #radio-btn.loading .radio-overlay {
+            opacity: 1;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #radio-btn.playing {
+            border-color: #ff6b6b;
+            animation: pulse-radio 2s infinite;
+        }
+        @keyframes pulse-radio {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4); }
+            50% { box-shadow: 0 0 0 12px rgba(255, 107, 107, 0); }
+        }
+        .radio-label {
+            font-size: 10px;
+            color: white;
+            text-align: center;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+            white-space: nowrap;
+            font-weight: 500;
+            max-width: 90px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 95%;
+            width: 380px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: slideIn 0.3s;
+            border: 3px solid #3498db;
+            margin: 10px;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 12px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: #3498db;
+            font-size: 1.4rem;
+        }
+
+        .close-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            font-size: 1.3rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            padding: 0;
+            margin: 0;
+            flex-shrink: 0;
+        }
+
+        .close-btn:hover {
+            background: #c0392b;
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
+
+        .modal-body h3 {
+            color: #3498db;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .modal-body h3:first-child {
+            margin-top: 0;
+        }
+
+        .modal-body p {
+            margin: 8px 0;
+            text-align: justify;
+        }
+
+        .modal-body ul, .modal-body ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .modal-body li {
+            margin: 5px 0;
+        }
+
+        .knight-move-diagram {
+            display: grid;
+            grid-template-columns: repeat(3, 40px);
+            grid-template-rows: repeat(3, 40px);
+            gap: 4px;
+            margin: 15px auto;
+            justify-content: center;
+            background: #2c3e50;
+            padding: 12px;
+            border-radius: 8px;
+            width: fit-content;
+        }
+
+        .knight-cell {
+            width: 40px;
+            height: 40px;
+            background: #bdc3c7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            font-size: 1.2rem;
+        }
+
+        .knight-cell.knight {
+            background: #27ae60;
+            color: white;
+        }
+
+        .knight-cell.valid {
+            background: #f1c40f;
+            animation: pulse 1.5s infinite;
+        }
+
+        .highlight {
+            color: #f1c40f;
+            font-weight: bold;
+        }
+
+        .tip-box {
+            background: rgba(52, 152, 219, 0.2);
+            border-left: 3px solid #3498db;
+            padding: 10px;
+            margin: 12px 0;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .tip-box strong {
+            color: #3498db;
+        }
+
+        @media (max-width: 480px) {
+            h1 { font-size: 1.2rem; }
+            .info-panel { font-size: 0.85rem; }
+            #board { width: 360px; height: 360px; }
+            .square { font-size: 0.9rem; }
+            .square.current { font-size: 1.2rem; }
+            .modal-content { width: 95%; padding: 15px; }
+            .knight-move-diagram { 
+                grid-template-columns: repeat(3, 35px);
+                grid-template-rows: repeat(3, 35px);
+            }
+            .knight-cell { width: 35px; height: 35px; font-size: 1rem; }
+        }
+
+        @media (max-width: 380px) {
+            #board { width: 320px; height: 320px; }
+            h1 { font-size: 1.1rem; }
+            .info-panel { gap: 8px; }
+            .controls { gap: 10px; }
+            button { padding: 7px 14px; font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 📻 RADIO 80 Y 90 -->
+    <audio id="radio-audio" preload="none" crossorigin="anonymous">
+        <source src="https://stream.zeno.fm/ndhkmuknva0uv" type="audio/mpeg">
+    </audio>
+
+    <h1>🐴 Recorrido del Caballo</h1>
+
+    <div class="info-panel">
+        <span>Casillas: <span id="score">0</span>/100</span>
+        <span>⏱️ <span id="timer">00:00</span></span>
+        <span id="status">Toca para empezar</span>
+        <span class="instructions-link" onclick="openModal()">📖 Instrucciones</span>
+    </div>
+
+    <div id="board"></div>
+
+    <div id="message"></div>
+    
+    <div class="controls">
+        <div class="sound-control">
+            <span>🔊</span>
+            <div class="sound-toggle active" id="soundToggle" onclick="toggleSound()"></div>
+        </div>
+        <button onclick="initGame()">🔄 Reiniciar</button>
+    </div>
+
+    <!-- 📻 BOTÓN RADIO (arriba izquierda) -->
+    <div class="radio-container">
+        <button id="radio-btn" onclick="toggleRadio()" title="Escuchar 80 y 90 Radio">
+            <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgqvizWNyyqSmA1V6SOmns4wLWw849mHxRjABDTG0o2iyoHbsDPc9nc0rQW4iW6bfpIQLNn6pOgPlWsygdsuMury7g3ss1yJwDOJY1kHXyQwi53Lp9cyIMduU3NzUVaeme8n6V3_yhhGMEIb5XrCmuBejA6FoE5Uyt9ZmNYAqCxqhFmJf2wA9DpTtz9xg/s640/s80y90.png" 
+                 alt="80 y 90 Radio" 
+                 class="radio-img"
+                 id="radio-img">
+            <div class="radio-overlay" id="radio-overlay">🔄</div>
+        </button>
+        <span class="radio-label">80 y 90 Radio</span>
+    </div>
+
+    <!-- Modal de Instrucciones -->
+    <div class="modal-overlay" id="instructionsModal" onclick="closeModalOnOverlay(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2>🎮 Cómo Jugar</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h3>🎯 Objetivo</h3>
+                <p>Visita <span class="highlight">las 100 casillas</span> sin repetir ninguna, usando solo movimientos de caballo.</p>
+
+                <h3>🐴 Movimiento</h3>
+                <p>El caballo se mueve en "L": 2 casillas en una dirección + 1 hacia un lado.</p>
+
+                <div class="knight-move-diagram">
+                    <div class="knight-cell valid">✓</div>
+                    <div class="knight-cell valid">✓</div>
+                    <div class="knight-cell valid">✓</div>
+                    <div class="knight-cell valid">✓</div>
+                    <div class="knight-cell knight">♞</div>
+                    <div class="knight-cell valid">✓</div>
+                    <div class="knight-cell valid">✓</div>
+                    <div class="knight-cell valid">✓</div>
+                    <div class="knight-cell valid">✓</div>
+                </div>
+                <p style="text-align: center; font-size: 0.8rem; color: #95a5a6; margin: 5px 0;">
+                    ♞ = Caballo &nbsp; ✓ = Movimientos
+                </p>
+
+                <h3>🎮 Pasos</h3>
+                <ol>
+                    <li>Toca cualquier casilla para empezar</li>
+                    <li>Toca casillas válidas (se iluminan en amarillo)</li>
+                    <li>¡Completa las 100 casillas!</li>
+                </ol>
+
+                <div class="tip-box">
+                    <strong>💡 Consejo:</strong> Las casillas amarillas muestran tus movimientos posibles. ¡Planifica bien!
+                </div>
+
+                <h3>🏆 Resultado</h3>
+                <ul>
+                    <li>✅ <strong>Ganas:</strong> 100 casillas visitadas</li>
+                    <li>❌ <strong>Pierdes:</strong> Sin movimientos posibles</li>
+                </ul>
+
+                <h3>⏱️ Tiempo</h3>
+                <p>El temporizador empieza con tu primer movimiento. ¡Intenta completar el recorrido en el menor tiempo posible!</p>
+
+                <h3>🎵 Controles</h3>
+                <ul>
+                    <li>🔊 Interruptor: Activa/desactiva sonido del juego</li>
+                    <li>📻 Radio: Activa/desactiva 80 y 90 Radio</li>
+                    <li>🔄 Botón: Reiniciar juego</li>
+                    <li>📖 Instrucciones: Esta pantalla</li>
+                </ul>
+
+                <div class="tip-box">
+                    <strong>🧠 Dato:</strong> Este es el clásico "Knight's Tour", un problema matemático del siglo IX.
+                </div>
+
+                <p style="text-align: center; margin-top: 20px; font-size: 1rem;">
+                    <strong>¡Buena suerte! 🎲</strong>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BOARD_SIZE = 10;
+        const TOTAL_SQUARES = BOARD_SIZE * BOARD_SIZE;
+        
+        const boardElement = document.getElementById('board');
+        const scoreElement = document.getElementById('score');
+        const timerElement = document.getElementById('timer');  // ✅ NUEVO
+        const statusElement = document.getElementById('status');
+        const messageElement = document.getElementById('message');
+
+        // 📻 RADIO VARIABLES
+        const radioAudio = document.getElementById('radio-audio');
+        const radioBtn = document.getElementById('radio-btn');
+        let radioEnabled = false;
+        let radioLoading = false;
+
+        let boardState = [];
+        let currentPos = -1;
+        let moveCount = 0;
+        let gameOver = false;
+        let gameStarted = false;
+        
+        // ⏱️ TIMER VARIABLES
+        let gameTime = 0;
+        let timerInterval = null;
+
+        const moves = [
+            [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+            [1, -2], [1, 2], [2, -1], [2, 1]
+        ];
+
+        // Modal
+        function openModal() {
+            const modal = document.getElementById('instructionsModal');
+            modal.classList.add('active');
+            initAudio();
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('instructionsModal');
+            modal.classList.remove('active');
+        }
+
+        function closeModalOnOverlay(event) {
+            if (event.target === event.currentTarget) {
+                closeModal();
+            }
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const modal = document.getElementById('instructionsModal');
+                if (modal.classList.contains('active')) {
+                    closeModal();
+                }
+            }
+        });
+
+        // Audio del juego
+        let audioContext = null;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const toggle = document.getElementById('soundToggle');
+            if (soundEnabled) {
+                toggle.classList.add('active');
+                initAudio();
+                playMoveSound();
+            } else {
+                toggle.classList.remove('active');
+            }
+        }
+
+        function playMoveSound() {
+            if (!soundEnabled || !audioContext) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 0.1);
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        function playErrorSound() {
+            if (!soundEnabled || !audioContext) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+            oscillator.frequency.linearRampToValueAtTime(100, audioContext.currentTime + 0.2);
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        }
+
+        function playWinSound() {
+            if (!soundEnabled || !audioContext) return;
+            const notes = [523.25, 659.25, 783.99, 1046.50];
+            notes.forEach((freq, index) => {
+                setTimeout(() => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = freq;
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.3);
+                }, index * 150);
+            });
+        }
+
+        function playLoseSound() {
+            if (!soundEnabled || !audioContext) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+            oscillator.frequency.linearRampToValueAtTime(100, audioContext.currentTime + 0.5);
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        // ⏱️ FUNCIONES DEL TIMER
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            gameTime = 0;
+            timerElement.textContent = formatTime(gameTime);
+            timerInterval = setInterval(() => {
+                gameTime++;
+                timerElement.textContent = formatTime(gameTime);
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function resetTimer() {
+            stopTimer();
+            gameTime = 0;
+            timerElement.textContent = formatTime(gameTime);
+        }
+
+        // 📻 FUNCIÓN RADIO: TOGGLE
+        function toggleRadio() {
+            if (radioLoading) return;
+            radioEnabled = !radioEnabled;
+            
+            if (radioEnabled) {
+                radioLoading = true;
+                radioBtn.classList.add('loading');
+                radioAudio.pause();
+                radioAudio.currentTime = 0;
+                
+                const playPromise = radioAudio.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        radioLoading = false;
+                        radioBtn.classList.remove('loading');
+                        radioBtn.classList.add('playing');
+                    }).catch(error => {
+                        console.error('Error al reproducir radio:', error);
+                        radioEnabled = false;
+                        radioLoading = false;
+                        radioBtn.classList.remove('loading', 'playing');
+                        alert('❌ No se pudo conectar a 80 y 90 Radio.');
+                    });
+                }
+            } else {
+                radioAudio.pause();
+                radioBtn.classList.remove('playing', 'loading');
+            }
+        }
+
+        // Lógica del juego
+        function initGame() {
+            initAudio();
+            boardState = new Array(TOTAL_SQUARES).fill(0);
+            currentPos = -1;
+            moveCount = 0;
+            gameOver = false;
+            gameStarted = false;
+            resetTimer();  // ✅ RESET TIMER
+            scoreElement.textContent = '0';
+            statusElement.textContent = 'Toca para empezar';
+            messageElement.textContent = '';
+            renderBoard();
+        }
+
+        function renderBoard() {
+            boardElement.innerHTML = '';
+            for (let i = 0; i < TOTAL_SQUARES; i++) {
+                const square = document.createElement('div');
+                square.classList.add('square');
+                square.dataset.index = i;
+                
+                if (boardState[i] > 0) {
+                    square.classList.add('visited');
+                    square.textContent = boardState[i];
+                }
+                
+                if (i === currentPos) {
+                    square.classList.add('current');
+                    square.textContent = '♞';
+                }
+
+                square.addEventListener('click', () => handleSquareClick(i));
+                square.addEventListener('mouseenter', () => showHints(i));
+                square.addEventListener('mouseleave', clearHints);
+                square.addEventListener('touchstart', () => showHints(i), {passive: true});
+                square.addEventListener('touchend', clearHints);
+
+                boardElement.appendChild(square);
+            }
+        }
+
+        function getCoords(index) {
+            return {
+                row: Math.floor(index / BOARD_SIZE),
+                col: index % BOARD_SIZE
+            };
+        }
+
+        function getIndex(row, col) {
+            return row * BOARD_SIZE + col;
+        }
+
+        function getValidMovesFrom(index) {
+            const { row, col } = getCoords(index);
+            const validMoves = [];
+
+            moves.forEach(move => {
+                const newRow = row + move[0];
+                const newCol = col + move[1];
+
+                if (newRow >= 0 && newRow < BOARD_SIZE && newCol >= 0 && newCol < BOARD_SIZE) {
+                    const newIndex = getIndex(newRow, newCol);
+                    if (boardState[newIndex] === 0) {
+                        validMoves.push(newIndex);
+                    }
+                }
+            });
+            return validMoves;
+        }
+
+        function handleSquareClick(index) {
+            if (gameOver) return;
+
+            if (!gameStarted) {
+                startGame(index);
+                return;
+            }
+
+            const validMoves = getValidMovesFrom(currentPos);
+            if (validMoves.includes(index)) {
+                makeMove(index);
+            } else {
+                playErrorSound();
+                statusElement.textContent = '¡Movimiento inválido!';
+                setTimeout(() => statusElement.textContent = `Movimientos: ${getValidMovesFrom(currentPos).length}`, 1000);
+            }
+        }
+
+        function startGame(index) {
+            gameStarted = true;
+            startTimer();  // ✅ INICIAR TIMER
+            makeMove(index);
+            statusElement.textContent = '¡Juego en curso!';
+        }
+
+        function makeMove(index) {
+            if (currentPos !== -1) {
+                boardState[currentPos] = moveCount;
+            }
+            currentPos = index;
+            moveCount++;
+            boardState[index] = 0;
+            scoreElement.textContent = moveCount;
+            renderBoard();
+            playMoveSound();
+            checkGameStatus();
+        }
+
+        function showHints(index) {
+            if (gameOver || !gameStarted) return;
+            const validMoves = getValidMovesFrom(currentPos);
+            if (validMoves.includes(index)) {
+                const squares = document.querySelectorAll('.square');
+                squares[index].classList.add('hint');
+            }
+        }
+
+        function clearHints() {
+            const hints = document.querySelectorAll('.hint');
+            hints.forEach(h => h.classList.remove('hint'));
+        }
+
+        function checkGameStatus() {
+            const validMoves = getValidMovesFrom(currentPos);
+
+            if (moveCount === TOTAL_SQUARES) {
+                gameOver = true;
+                stopTimer();  // ✅ PARAR TIMER AL GANAR
+                messageElement.textContent = `¡FELICIDADES! ¡Completaste las 100 casillas en ${formatTime(gameTime)}!`;
+                statusElement.textContent = '¡Juego Terminado!';
+                playWinSound();
+                document.querySelectorAll('.square').forEach(s => s.style.backgroundColor = '#27ae60');
+            } else if (validMoves.length === 0) {
+                gameOver = true;
+                stopTimer();  // ✅ PARAR TIMER AL PERDER
+                messageElement.textContent = `Juego Terminado. ${moveCount} casillas en ${formatTime(gameTime)}.`;
+                statusElement.textContent = 'Sin movimientos';
+                playLoseSound();
+            } else {
+                statusElement.textContent = `Movimientos: ${validMoves.length}`;
+            }
+        }
+
+        // Prevenir zoom
+        document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
+        document.addEventListener('gesturechange', function(e) { e.preventDefault(); });
+        document.addEventListener('gestureend', function(e) { e.preventDefault(); });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        initGame();
+    </script>
+</body>
+</html>
