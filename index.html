@@ -111,26 +111,15 @@
             font-size: 1.3rem;
         }
 
-        /* ✅ HINTS CON ANIMACIÓN DE ENTRADA */
         .square.hint {
             background-color: var(--square-hint);
             animation: hintEnter 0.4s ease-out forwards, pulse 1.5s ease-in-out infinite 0.4s;
         }
 
-        /* ✅ ANIMACIÓN DE ENTRADA (fade + scale) */
         @keyframes hintEnter {
-            0% { 
-                transform: scale(0.5); 
-                opacity: 0; 
-            }
-            50% {
-                transform: scale(1.1);
-                opacity: 1;
-            }
-            100% { 
-                transform: scale(1); 
-                opacity: 1; 
-            }
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
         }
 
         @keyframes pulse {
@@ -287,6 +276,101 @@
             white-space: nowrap;
             font-weight: 500;
             max-width: 90px;
+        }
+
+        /* 🎬 PANTALLA DE CARGA - IMAGEN 400PX */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+        }
+
+        #loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-image {
+            width: 400px;  /* ✅ IGUAL QUE EL TABLERO */
+            max-width: 90vw;
+            height: auto;
+            object-fit: contain;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            animation: loadingImagePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes loadingImagePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .loading-container {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;  /* ✅ IGUAL QUE LA IMAGEN */
+            max-width: 90%;
+            text-align: center;
+        }
+
+        .loading-text {
+            color: #ecf0f1;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            font-weight: bold;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+        }
+
+        .loading-bar-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .loading-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #f1c40f, #f39c12);
+            border-radius: 4px;
+            transition: width 0.1s linear;
+            animation: loadingBarGlow 1.5s ease-in-out infinite;
+        }
+
+        @keyframes loadingBarGlow {
+            0%, 100% { box-shadow: 0 0 5px #f1c40f; }
+            50% { box-shadow: 0 0 15px #f1c40f; }
+        }
+
+        .loading-percentage {
+            color: #f1c40f;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .loading-dots {
+            display: inline-block;
+            animation: loadingDots 1.5s infinite;
+        }
+
+        @keyframes loadingDots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
         }
 
         /* Modal */
@@ -479,6 +563,18 @@
 </head>
 <body>
 
+    <!-- 🎬 PANTALLA DE CARGA -->
+    <div id="loading-screen">
+        <img src="portada.jpg" alt="Cargando juego..." class="loading-image" onerror="this.style.display='none'; document.querySelector('.loading-text').textContent='⚠️ Error al cargar portada.jpg';">
+        <div class="loading-container">
+            <div class="loading-text">Cargando juego<span class="loading-dots"></span></div>
+            <div class="loading-bar-container">
+                <div class="loading-bar" id="loading-bar"></div>
+            </div>
+            <div class="loading-percentage" id="loading-percentage">0%</div>
+        </div>
+    </div>
+
     <!-- 📻 RADIO 80 Y 90 -->
     <audio id="radio-audio" preload="none" crossorigin="anonymous">
         <source src="https://stream.zeno.fm/ndhkmuknva0uv" type="audio/mpeg">
@@ -611,10 +707,56 @@
         let gameTime = 0;
         let timerInterval = null;
 
+        // 🎬 LOADING SCREEN VARIABLES
+        let isLoadingScreenShown = sessionStorage.getItem('loadingScreenShown');
+
         const moves = [
             [-2, -1], [-2, 1], [-1, -2], [-1, 2],
             [1, -2], [1, 2], [2, -1], [2, 1]
         ];
+
+        // 🎬 FUNCIÓN: MOSTRAR PANTALLA DE CARGA (solo primera vez)
+        function showLoadingScreen() {
+            if (isLoadingScreenShown === 'true') {
+                document.getElementById('loading-screen').classList.add('hidden');
+                return;
+            }
+
+            sessionStorage.setItem('loadingScreenShown', 'true');
+
+            const loadingBar = document.getElementById('loading-bar');
+            const loadingPercentage = document.getElementById('loading-percentage');
+            const loadingDots = document.querySelector('.loading-dots');
+            let progress = 0;
+            const duration = 10000;
+            const interval = 50;
+            const increment = 100 / (duration / interval);
+
+            const loadingInterval = setInterval(() => {
+                progress += increment;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(loadingInterval);
+                    
+                    setTimeout(() => {
+                        document.getElementById('loading-screen').classList.add('hidden');
+                    }, 300);
+                }
+
+                loadingBar.style.width = progress + '%';
+                loadingPercentage.textContent = Math.round(progress) + '%';
+            }, interval);
+
+            let dots = 0;
+            const dotsInterval = setInterval(() => {
+                dots = (dots + 1) % 4;
+                loadingDots.textContent = '.'.repeat(dots);
+            }, 300);
+
+            setTimeout(() => {
+                clearInterval(dotsInterval);
+            }, duration);
+        }
 
         // Modal
         function openModal() {
@@ -830,7 +972,6 @@
                 boardElement.appendChild(square);
             }
             
-            // ✅ MOSTRAR HINTS AUTOMÁTICAMENTE DESPUÉS DE RENDERIZAR
             if (gameStarted && !gameOver && currentPos !== -1) {
                 showHintsAutomatically();
             }
@@ -865,28 +1006,18 @@
             return validMoves;
         }
 
-        // ✅ FUNCIÓN: MOSTRAR HINTS AUTOMÁTICAMENTE CON ANIMACIÓN
         function showHintsAutomatically() {
-            // Primero limpiar hints anteriores
             clearHints();
-            
-            // Obtener movimientos válidos
             const validMoves = getValidMovesFrom(currentPos);
-            
-            // Añadir clase hint a cada movimiento válido (con animación de entrada)
             const squares = document.querySelectorAll('.square');
             validMoves.forEach((index, i) => {
-                // ✅ AÑADIR RETRASO EN CASCADA PARA CADA HINT
                 setTimeout(() => {
                     squares[index].classList.add('hint');
-                }, i * 50);  // 50ms de retraso entre cada hint
+                }, i * 50);
             });
-            
-            // Actualizar status con número de movimientos
             statusElement.textContent = `Movimientos disponibles: ${validMoves.length}`;
         }
 
-        // ✅ FUNCIÓN LIMPIAR HINTS
         function clearHints() {
             const hints = document.querySelectorAll('.hint');
             hints.forEach(h => h.classList.remove('hint'));
@@ -928,7 +1059,7 @@
             moveCount++;
             boardState[index] = 0;
             scoreElement.textContent = moveCount;
-            renderBoard();  // ✅ Esto llama a showHintsAutomatically()
+            renderBoard();
             playMoveSound();
             checkGameStatus();
         }
@@ -966,6 +1097,9 @@
             lastTouchEnd = now;
         }, false);
 
+        // 🎬 INICIAR PANTALLA DE CARGA AL CARGAR LA PÁGINA
+        showLoadingScreen();
+        
         initGame();
     </script>
 </body>
