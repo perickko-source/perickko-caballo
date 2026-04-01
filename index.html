@@ -40,7 +40,6 @@
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            /* ✅ AÑADIDO: padding-top para bajar contenido (radio se mantiene fija) */
             padding: 110px 5px 8px 5px;
         }
 
@@ -112,15 +111,31 @@
             font-size: 1.3rem;
         }
 
+        /* ✅ HINTS CON ANIMACIÓN DE ENTRADA */
         .square.hint {
             background-color: var(--square-hint);
-            animation: pulse 1s infinite;
+            animation: hintEnter 0.4s ease-out forwards, pulse 1.5s ease-in-out infinite 0.4s;
+        }
+
+        /* ✅ ANIMACIÓN DE ENTRADA (fade + scale) */
+        @keyframes hintEnter {
+            0% { 
+                transform: scale(0.5); 
+                opacity: 0; 
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+            100% { 
+                transform: scale(1); 
+                opacity: 1; 
+            }
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); }
+            0%, 100% { transform: scale(1); }
             50% { transform: scale(0.95); }
-            100% { transform: scale(1); }
         }
 
         .controls {
@@ -197,8 +212,8 @@
 
         /* 📻 RADIO 80 Y 90 - POSICIÓN FIJA ARRIBA IZQUIERDA */
         .radio-container {
-            position: fixed;  /* ✅ FIXED para que no se mueva con el padding */
-            top: 10px;        /* ✅ Mantenido en su posición original */
+            position: fixed;
+            top: 10px;
             left: 10px;
             display: flex;
             flex-direction: column;
@@ -534,12 +549,12 @@
                 <h3>🎮 Pasos</h3>
                 <ol>
                     <li>Toca cualquier casilla para empezar</li>
-                    <li>Toca casillas válidas (se iluminan en amarillo)</li>
+                    <li>Toca las casillas <span class="highlight">amarillas</span> (movimientos válidos)</li>
                     <li>¡Completa las 100 casillas!</li>
                 </ol>
 
                 <div class="tip-box">
-                    <strong>💡 Consejo:</strong> Las casillas amarillas muestran tus movimientos posibles. ¡Planifica bien!
+                    <strong>💡 Consejo:</strong> Las casillas amarillas aparecen con animación para mostrar tus movimientos posibles. ¡Planifica bien!
                 </div>
 
                 <h3>🏆 Resultado</h3>
@@ -811,12 +826,13 @@
                 }
 
                 square.addEventListener('click', () => handleSquareClick(i));
-                square.addEventListener('mouseenter', () => showHints(i));
-                square.addEventListener('mouseleave', clearHints);
-                square.addEventListener('touchstart', () => showHints(i), {passive: true});
-                square.addEventListener('touchend', clearHints);
 
                 boardElement.appendChild(square);
+            }
+            
+            // ✅ MOSTRAR HINTS AUTOMÁTICAMENTE DESPUÉS DE RENDERIZAR
+            if (gameStarted && !gameOver && currentPos !== -1) {
+                showHintsAutomatically();
             }
         }
 
@@ -849,6 +865,33 @@
             return validMoves;
         }
 
+        // ✅ FUNCIÓN: MOSTRAR HINTS AUTOMÁTICAMENTE CON ANIMACIÓN
+        function showHintsAutomatically() {
+            // Primero limpiar hints anteriores
+            clearHints();
+            
+            // Obtener movimientos válidos
+            const validMoves = getValidMovesFrom(currentPos);
+            
+            // Añadir clase hint a cada movimiento válido (con animación de entrada)
+            const squares = document.querySelectorAll('.square');
+            validMoves.forEach((index, i) => {
+                // ✅ AÑADIR RETRASO EN CASCADA PARA CADA HINT
+                setTimeout(() => {
+                    squares[index].classList.add('hint');
+                }, i * 50);  // 50ms de retraso entre cada hint
+            });
+            
+            // Actualizar status con número de movimientos
+            statusElement.textContent = `Movimientos disponibles: ${validMoves.length}`;
+        }
+
+        // ✅ FUNCIÓN LIMPIAR HINTS
+        function clearHints() {
+            const hints = document.querySelectorAll('.hint');
+            hints.forEach(h => h.classList.remove('hint'));
+        }
+
         function handleSquareClick(index) {
             if (gameOver) return;
 
@@ -863,7 +906,11 @@
             } else {
                 playErrorSound();
                 statusElement.textContent = '¡Movimiento inválido!';
-                setTimeout(() => statusElement.textContent = `Movimientos: ${getValidMovesFrom(currentPos).length}`, 1000);
+                setTimeout(() => {
+                    if (!gameOver) {
+                        statusElement.textContent = `Movimientos disponibles: ${getValidMovesFrom(currentPos).length}`;
+                    }
+                }, 1000);
             }
         }
 
@@ -871,7 +918,6 @@
             gameStarted = true;
             startTimer();
             makeMove(index);
-            statusElement.textContent = '¡Juego en curso!';
         }
 
         function makeMove(index) {
@@ -882,23 +928,9 @@
             moveCount++;
             boardState[index] = 0;
             scoreElement.textContent = moveCount;
-            renderBoard();
+            renderBoard();  // ✅ Esto llama a showHintsAutomatically()
             playMoveSound();
             checkGameStatus();
-        }
-
-        function showHints(index) {
-            if (gameOver || !gameStarted) return;
-            const validMoves = getValidMovesFrom(currentPos);
-            if (validMoves.includes(index)) {
-                const squares = document.querySelectorAll('.square');
-                squares[index].classList.add('hint');
-            }
-        }
-
-        function clearHints() {
-            const hints = document.querySelectorAll('.hint');
-            hints.forEach(h => h.classList.remove('hint'));
         }
 
         function checkGameStatus() {
@@ -917,8 +949,6 @@
                 messageElement.textContent = `Juego Terminado. ${moveCount} casillas en ${formatTime(gameTime)}.`;
                 statusElement.textContent = 'Sin movimientos';
                 playLoseSound();
-            } else {
-                statusElement.textContent = `Movimientos: ${validMoves.length}`;
             }
         }
 
